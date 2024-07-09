@@ -474,6 +474,7 @@ static ConfigSetting generalSettings[] = {
 	ConfigSetting("UISound", &g_Config.bUISound, false, true, false),
 
 	ReportedConfigSetting("NumWorkerThreads", &g_Config.iNumWorkerThreads, &DefaultNumWorkers, true, true),
+	ConfigSetting("EnforceSingleThreaded", &g_Config.bEnforceSingleThreaded, false),
 	ConfigSetting("AutoLoadSaveState", &g_Config.iAutoLoadSaveState, 0, true, true),
 	ReportedConfigSetting("EnableCheats", &g_Config.bEnableCheats, false, true, true),
 	ConfigSetting("CwCheatRefreshRate", &g_Config.iCwCheatRefreshRate, 77, true, true),

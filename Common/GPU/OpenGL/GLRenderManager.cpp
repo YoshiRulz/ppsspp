@@ -7,6 +7,7 @@
 #include "Common/Log.h"
 #include "Common/MemoryUtil.h"
 #include "Common/Math/math_util.h"
+#include "Core/Config.h"
 
 #if 0 // def _DEBUG
 #define VLOG(...) INFO_LOG(G3D, __VA_ARGS__)
@@ -212,11 +213,13 @@ bool GLRenderManager::ThreadFrame() {
 		}
 		FrameData &frameData = frameData_[threadFrame_];
 		{
+if (!g_Config.bEnforceSingleThreaded) {
 			std::unique_lock<std::mutex> lock(frameData.pull_mutex);
 			while (!frameData.readyForRun && run_) {
 				VLOG("PULL: Waiting for frame[%d].readyForRun", threadFrame_);
 				frameData.pull_condVar.wait(lock);
 			}
+}
 			if (!frameData.readyForRun && !run_) {
 				// This means we're out of frames to render and run_ is false, so bail.
 				return false;
@@ -285,10 +288,12 @@ void GLRenderManager::StopThread() {
 			frameData.steps.clear();
 			frameData.initSteps.clear();
 
+if (!g_Config.bEnforceSingleThreaded) {
 			while (!frameData.readyForFence) {
 				VLOG("PUSH: Waiting for frame[%d].readyForFence = 1 (stop)", i);
 				frameData.push_condVar.wait(lock);
 			}
+}
 		}
 	} else {
 		INFO_LOG(G3D, "GL submission thread was already paused.");
@@ -456,11 +461,13 @@ void GLRenderManager::BeginFrame() {
 
 	// Make sure the very last command buffer from the frame before the previous has been fully executed.
 	{
+if (!g_Config.bEnforceSingleThreaded) {
 		std::unique_lock<std::mutex> lock(frameData.push_mutex);
 		while (!frameData.readyForFence) {
 			VLOG("PUSH: Waiting for frame[%d].readyForFence = 1", curFrame);
 			frameData.push_condVar.wait(lock);
 		}
+}
 		frameData.readyForFence = false;
 		frameData.readyForSubmit = true;
 	}
@@ -620,12 +627,14 @@ void GLRenderManager::FlushSync() {
 		frameData.pull_condVar.notify_all();
 	}
 	{
+if (!g_Config.bEnforceSingleThreaded) {
 		std::unique_lock<std::mutex> lock(frameData.push_mutex);
 		// Wait for the flush to be hit, since we're syncing.
 		while (!frameData.readyForFence) {
 			VLOG("PUSH: Waiting for frame[%d].readyForFence = 1 (sync)", curFrame);
 			frameData.push_condVar.wait(lock);
 		}
+}
 		frameData.readyForFence = false;
 		frameData.readyForSubmit = true;
 	}
@@ -661,6 +670,8 @@ void GLRenderManager::Wipe() {
 }
 
 void GLRenderManager::WaitUntilQueueIdle() {
+	if (g_Config.bEnforceSingleThreaded) return;
+
 	// Just wait for all frames to be ready.
 	for (int i = 0; i < MAX_INFLIGHT_FRAMES; i++) {
 		FrameData &frameData = frameData_[i];
@@ -797,7 +808,9 @@ void GLPushBuffer::NextBuffer(size_t minSize) {
 }
 
 void GLPushBuffer::Defragment() {
+if (false) {
 	_dbg_assert_msg_(!OnRenderThread(), "Defragment must not run on the render thread");
+}
 
 	if (buffers_.size() <= 1) {
 		// Let's take this chance to jetison localMemory we don't need.

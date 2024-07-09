@@ -314,7 +314,7 @@ bool Load_PSP_ISO(FileLoader *fileLoader, std::string *error_string) {
 	// Note: this thread reads the game binary, loads caches, and links HLE while UI spins.
 	// To do something deterministically when the game starts, disabling this thread won't be enough.
 	// Instead: Use Core_ListenLifecycle() or watch coreState.
-	loadingThread = std::thread([bootpath] {
+	std::function<void()> execLoaderFunc = ([bootpath] {
 		SetCurrentThreadName("ExecLoader");
 		PSP_LoadingLock guard;
 		if (coreState != CORE_POWERUP)
@@ -331,6 +331,13 @@ bool Load_PSP_ISO(FileLoader *fileLoader, std::string *error_string) {
 			PSP_CoreParameter().fileToStart.clear();
 		}
 	});
+
+//	if (g_Config.bEnforceSingleThreaded) {
+//		execLoaderFunc();
+//	} else {
+		std::thread loadingThread(execLoaderFunc);
+//	}
+
 	return true;
 }
 

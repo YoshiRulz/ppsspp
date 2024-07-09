@@ -5,6 +5,7 @@
 
 #include "Common/Log.h"
 #include "Common/MakeUnique.h"
+#include "Core/Config.h"
 
 ///////////////////////////// WorkerThread
 
@@ -71,6 +72,9 @@ void LoopWorkerThread::ProcessLoop(std::function<void(int, int)> work, int start
 ///////////////////////////// ThreadPool
 
 ThreadPool::ThreadPool(int numThreads) {
+	if (g_Config.bEnforceSingleThreaded) {
+		numThreads_ = 0;
+	} else
 	if (numThreads <= 0) {
 		numThreads_ = 1;
 		INFO_LOG(JIT, "ThreadPool: Bad number of threads %d", numThreads);
@@ -100,6 +104,9 @@ void ThreadPool::ParallelLoop(const std::function<void(int,int)> &loop, int lowe
 		minSize = 4;
 
 	int range = upper - lower;
+	if (g_Config.bEnforceSingleThreaded) {
+		loop(lower, upper);
+	} else
 	if (range >= minSize) {
 		std::lock_guard<std::mutex> guard(mutex);
 		StartWorkers();

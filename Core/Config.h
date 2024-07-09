@@ -73,6 +73,7 @@ public:
 
 	// General
 	int iNumWorkerThreads;
+	bool bEnforceSingleThreaded;
 	bool bScreenshotsAsPNG;
 	bool bUseFFV1;
 	bool bDumpFrames;
